@@ -91,6 +91,50 @@ You will need `git`. See the platform specific instructions below to install it.
 
 ## Building on Linux
 
+### Building Python Extension on Linux
+
+For additional packages to install see next section.
+It is assumed that code is already cloned an all submodules are updated.
+
+To build and install the python extension on Linux run the following:
+```sh
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_GUI=OFF -DENABLE_OPENMP=ON -DBUILD_PYTHON=ON
+make -j 4
+
+# Install the python extension
+sudo make install-python
+```
+
+To test the python extension run the following:
+```sh
+cd ../exposed
+python demo.py
+```
+
+You should get an output like:
+```sh
+solved okay
+sys.GroupHandle=1
+sys.ParamHandle=0
+sys.EntityHandle=0
+sys.ConstraintHandle=0
+line from (10.000 11.180) to (10.000 -18.820)
+arc center (101.114 119.042) start (116.477 111.762) finish (117.409 114.197)
+circle center (200.000 200.000) radius 17.000
+DOF=6
+```
+
+Compare it with the output of CDemo:
+```sh
+solved okay
+line from (10.000 11.180) to (10.000 -18.820)
+arc center (101.114 119.042) start (116.477 111.762) finish (117.409 114.197)
+circle center (200.000 200.000) radius 17.000
+6 DOF
+```
+
 ### Building for Linux
 
 You will need the usual build tools, CMake, zlib, libpng, cairo, freetype. To

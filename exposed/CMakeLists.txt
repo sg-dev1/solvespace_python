@@ -5,7 +5,7 @@ add_executable(CDemo
     CDemo.c)
 
 target_link_libraries(CDemo
-    slvs)
+    slvs_shared)
 
 if(EMSCRIPTEN)
     set_target_properties(CDemo PROPERTIES

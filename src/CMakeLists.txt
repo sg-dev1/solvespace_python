@@ -66,7 +66,7 @@ if(APPLE)
 endif()
 
 # libslvs
-add_library(slvs SHARED
+add_library(slvs_shared SHARED
     solvespace.h
     platform/platform.h
     util.cpp
@@ -78,24 +78,91 @@ add_library(slvs SHARED
     platform/platform.cpp
     lib.cpp)
 
-target_compile_definitions(slvs
+target_compile_definitions(slvs_shared
     PRIVATE -DLIBRARY)
 
-target_include_directories(slvs
+target_include_directories(slvs_shared
     PUBLIC
         ${CMAKE_SOURCE_DIR}/include
         ${EIGEN3_INCLUDE_DIRS})
 
-target_link_libraries(slvs PRIVATE slvs_deps)
+target_link_libraries(slvs_shared PRIVATE slvs_deps)
 
-set_target_properties(slvs PROPERTIES
+set_target_properties(slvs_shared PROPERTIES
     PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/slvs.h
     VERSION ${PROJECT_VERSION}
     SOVERSION 1)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+#add_library(slvs_static STATIC
+#    ${libslvs_SOURCES}
+#    ${libslvs_HEADERS}
+#    ${util_SOURCES}
+#    lib.cpp)
+add_library(slvs_static STATIC
+    solvespace.h
+    platform/platform.h
+    util.cpp
+    entity.cpp
+    expr.cpp
+    constraint.cpp
+    constrainteq.cpp
+    system.cpp
+    platform/platform.cpp
+    lib.cpp)
+
+target_compile_definitions(slvs_static
+    PRIVATE -DLIBRARY)
+
+target_include_directories(slvs_static
+    PUBLIC ${CMAKE_SOURCE_DIR}/include
+    ${EIGEN3_INCLUDE_DIRS})
+
+target_link_libraries(slvs_static PRIVATE slvs_deps)
+
+set_target_properties(slvs_static PROPERTIES
+    PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/slvs.h
+    OUTPUT_NAME slvs)
+
+#add_library(slvs_static_excp STATIC
+#    ${libslvs_SOURCES}
+#    ${libslvs_HEADERS}
+#    ${util_SOURCES}
+#    lib.cpp)
+add_library(slvs_static_excp STATIC
+    solvespace.h
+    platform/platform.h
+    util.cpp
+    entity.cpp
+    expr.cpp
+    constraint.cpp
+    constrainteq.cpp
+    system.cpp
+    platform/platform.cpp
+    lib.cpp)
+
+target_compile_definitions(slvs_static_excp
+    PRIVATE -DLIBRARY -DSLVS_OOPS_EXCEPTION)
+
+target_include_directories(slvs_static_excp
+    PUBLIC ${CMAKE_SOURCE_DIR}/include
+    ${EIGEN3_INCLUDE_DIRS})
+
+target_link_libraries(slvs_static_excp PRIVATE slvs_deps)
+
+set_target_properties(slvs_static_excp PROPERTIES
+    PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/slvs.h
+    OUTPUT_NAME slvs_excp)
+
+
 if(NOT WIN32)
-    install(TARGETS slvs
+    install(TARGETS slvs_shared
         LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+    install(TARGETS slvs_static
         ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
@@ -459,3 +526,5 @@ if(APPLE)
             VERBATIM)
     endif()
 endif()
+
+add_subdirectory(swig)
