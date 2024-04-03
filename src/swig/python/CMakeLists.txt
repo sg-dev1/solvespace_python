@@ -29,7 +29,7 @@ if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
 else()
     swig_add_library(slvs LANGUAGE python SOURCES ../slvs.i)
 endif()
-swig_link_libraries(slvs slvs_static_excp ${PYTHON_LIBRARIES})
+swig_link_libraries(slvs slvs_shared ${PYTHON_LIBRARIES})
 
 # set_target_properties(_slvs PROPERTIES
 #     OUTPUT_NAME "_slvs"

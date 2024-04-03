@@ -79,7 +79,7 @@ add_library(slvs_shared SHARED
     lib.cpp)
 
 target_compile_definitions(slvs_shared
-    PRIVATE -DLIBRARY)
+    PRIVATE -DLIBRARY -DSLVS_OOPS_EXCEPTION)
 
 target_include_directories(slvs_shared
     PUBLIC
@@ -144,6 +144,10 @@ add_library(slvs_static_excp STATIC
 
 target_compile_definitions(slvs_static_excp
     PRIVATE -DLIBRARY -DSLVS_OOPS_EXCEPTION)
+
+if(MSVC)
+    target_compile_options(slvs_static_excp INTERFACE /EHsc-)
+endif(MSVC)
 
 target_include_directories(slvs_static_excp
     PUBLIC ${CMAKE_SOURCE_DIR}/include

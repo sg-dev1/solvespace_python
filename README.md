@@ -135,6 +135,33 @@ circle center (200.000 200.000) radius 17.000
 6 DOF
 ```
 
+### Building and Installing Python Extension on Windows
+
+Use the provided script ```build_windows.bat``` to generate build files for Visual Studio. 
+(Note: adapt the PYTHON_INCLUDE, PYTHON_LIB, SWIG_DIR, SWIG_EXECUTABLE environment variables and the path to this repo in the script accordingly ).
+Run the following commands in the project root directory in a Developer PowerShell (else it may not be able to find cmake).
+```
+mkdir build
+cd build
+build_windows.bat
+```
+
+Open the solution **solvespace.sln** in Visual Studio and build the project.
+Select Release build type.
+
+This should create the following files:
+  - build/bin/Release/_slvs.pyd
+  - build/bin/Release/slvs_shared.dll
+  - build/src/swig/python/slvs.py
+  
+- The first two files need to be copied to <PYTHON_DIR>/DLLs (e.g. C:\Python312\DLLs).
+- The third file needs to be copied to <PYTHON_DIR>/Lib (e.g. C:\Python312\Lib)
+
+Test that the installation works properly by running the script exposed/demo.py.
+
+This was tested under Windows 10 with Python 3.12 installed and Visual Studio Community 2022 (Version 17.7.5).
+Other than the Linux build the shared library is used because the the static library created link errors.
+
 ### Building for Linux
 
 You will need the usual build tools, CMake, zlib, libpng, cairo, freetype. To

@@ -19,3 +19,5 @@
 out/
 .vs/
 CMakeSettings.json
+
+build_windows_priv.bat

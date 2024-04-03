@@ -1,12 +1,22 @@
 #ifndef _SLVS_SWIG_
 #define _SLVS_SWIG_
 
+#include <stdexcept>
 #include <stdio.h>
 #include <string.h>
 #include <vector>
 #include <map>
-#include <stdexcept>
 #include "slvs.h"
+
+
+#ifdef _DEBUG
+  #undef _DEBUG
+  #include <python.h>
+  #define _DEBUG
+#else
+  #include <python.h>
+#endif
+
 
 class System {
 private:
@@ -41,7 +51,7 @@ public:
         Dof = -1;
     }
 
-    int solve(Slvs_hGroup group=0, bool reportFailed=false) {
+    int solve(Slvs_hGroup group=0, bool reportFailed=false, bool findFreeParams=false) {
         Slvs_System sys = {};
 #define SLVS_PREPARE(_name,_n,_ns) \
         _name.clear();\
@@ -61,10 +71,17 @@ public:
             sys.failed = &Failed[0];
             sys.calculateFaileds = 1;
         }
+        sys.findFreeParams = findFreeParams;
 
         if(!group) group = GroupHandle;
 
-        Slvs_Solve(&sys, group);
+        try {
+            Slvs_Solve(&sys, group);
+        }catch(std::exception &) {
+            Failed.clear();
+            Dof = -1;
+            throw;
+        }
         Dof = sys.dof;
 
         int i = 0;
@@ -77,32 +94,29 @@ public:
 
 #define SLVS_ACCESSOR(_name) \
     const Slvs_##_name &get##_name(Slvs_h##_name h) const \
-        throw(std::invalid_argument)\
     {\
         auto it = _name##Map.find(h);\
         if(it==_name##Map.end())\
-            throw std::invalid_argument("handle not found");\
+            throw std::invalid_argument(#_name " handle not found");\
         return it->second;\
     }\
     void remove##_name(Slvs_h##_name h) \
-        throw(std::invalid_argument)\
     {\
         auto it = _name##Map.find(h);\
         if(it==_name##Map.end())\
-            throw std::invalid_argument("handle not found");\
+            throw std::invalid_argument(#_name "handle not found");\
         _name##Map.erase(it);\
     }\
     Slvs_h##_name add##_name(const Slvs_##_name &v, bool overwrite=false) \
-        throw(std::invalid_argument)\
     {\
         if(!v.h)\
-            throw std::invalid_argument("invalid handle");\
+            throw std::invalid_argument("invalid " #_name " handle");\
         if(!v.group)\
             throw std::invalid_argument("invalid group");\
         auto it = _name##Map.find(v.h);\
         if(it!=_name##Map.end()) {\
             if(!overwrite)\
-                throw std::invalid_argument("duplicate handle");\
+                throw std::invalid_argument("duplicate " #_name " handle");\
             it->second = v;\
         }else\
             _name##Map[v.h] = v;\
@@ -113,17 +127,43 @@ public:
     SLVS_ACCESSOR(Constraint)
     SLVS_ACCESSOR(Entity)
 
-#define SLVS_SET(_name) \
+    Slvs_hParam getEntityParam(Slvs_hEntity h, int idx) const
+    {
+#define SLVS_GET_ENTITY(_name,_idx) \
+        if(idx<0 || idx>=_idx)\
+            throw(std::invalid_argument("invalid " #_name " index"));\
+        auto it = EntityMap.find(h);\
+        if(it==EntityMap.end())\
+            throw std::invalid_argument("Entity handle not found")
+
+        SLVS_GET_ENTITY(param,7);
+        return it->second.param[idx];
+    }
+
+    void setEntityParam(Slvs_hEntity h, int idx, Slvs_hParam hParam)
+    {
+        SLVS_GET_ENTITY(param,7);
+        it->second.param[idx] = hParam;
+    }
+
+    Slvs_hParam getEntityPoint(Slvs_hEntity h, int idx) const
+    {
+        SLVS_GET_ENTITY(point,4);
+        return it->second.point[idx];
+    }
+
+    void setEntityPoint(Slvs_hEntity h, int idx, Slvs_hEntity hEntity)
+    {
+        SLVS_GET_ENTITY(point,4);
+        it->second.point[idx] = hEntity;
+    }
 
     Slvs_hParam addParamV(double val, Slvs_hGroup group=0, Slvs_hParam h=0) 
     {
-#define SLVS_INIT(_name,_v,...) \
+#define SLVS_ADD(_name,...) \
         if(!h) h = ++_name##Handle;\
         if(!group) group=GroupHandle;\
-        auto _var = Slvs_Make##_v(h,group, ## __VA_ARGS__);\
-
-#define SLVS_ADD(_name,...) \
-        SLVS_INIT(_name,_name,## __VA_ARGS__);\
+        auto _var = Slvs_Make##_name(h,group, ## __VA_ARGS__);\
         return add##_name(_var);\
 
         SLVS_ADD(Param,val);
@@ -133,8 +173,10 @@ public:
                             Slvs_hParam u, Slvs_hParam v,
                             Slvs_hGroup group=0, Slvs_hEntity h=0)
     {
-#define SLVS_ADD_ENTITY(...) \
-        SLVS_INIT(Entity, ## __VA_ARGS__);\
+#define SLVS_ADD_ENTITY(_name,...) \
+        if(!h) h = ++EntityHandle;\
+        if(!group) group=GroupHandle;\
+        auto _var = Slvs_Make##_name(h,group, ## __VA_ARGS__);\
         return addEntity(_var);
 
         SLVS_ADD_ENTITY(Point2d,wrkpln,u,v);
@@ -229,7 +271,7 @@ public:
         SLVS_ADD_ENTITY(Workplane,origin,normal);
     }
 
-#if 0
+/*
     Slvs_hEntity addTransform(Slvs_hEntity src,  
             Slvs_hParam dx, Slvs_hParam dy, Slvs_hParam dz,
             Slvs_hParam qw, Slvs_hParam qx, Slvs_hParam qy, Slvs_hParam qz,
@@ -239,9 +281,9 @@ public:
         SLVS_ADD_ENTITY(Transform,src,dx,dy,dz,qw,qx,qy,qz,
                 0,asAxisAngle?1:0,scale,timesApplied);
     }
-#endif // 0
+	*/
 
-#if 0
+/*
     Slvs_hEntity addTranslate(Slvs_hEntity src,  
             Slvs_hParam dx, Slvs_hParam dy, Slvs_hParam dz,
             double scale=1.0, int timesApplied=0, 
@@ -249,7 +291,7 @@ public:
     {
         SLVS_ADD_ENTITY(Transform,src,dx,dy,dz,0,0,0,0,1,0,scale,timesApplied);
     }
-#endif // 0
+	*/
 
     Slvs_hConstraint addConstraintV(int tp, Slvs_hEntity wrkpln, double v,
                                     Slvs_hEntity p1, Slvs_hEntity p2,
@@ -342,7 +384,10 @@ public:
         Slvs_hEntity l1,Slvs_hEntity l2, Slvs_hEntity l3, Slvs_hEntity l4,
         Slvs_hEntity wrkpln=0, Slvs_hGroup group=0, Slvs_hConstraint h=0)
     {
-#define SLVS_INIT_CSTR(...)  SLVS_INIT(Constraint,Constraint,## __VA_ARGS__)
+#define SLVS_INIT_CSTR(...) \
+        if(!h) h = ++ConstraintHandle;\
+        if(!group) group=GroupHandle;\
+        auto _var = Slvs_MakeConstraint(h,group, ## __VA_ARGS__);\
 
         SLVS_INIT_CSTR(SLVS_C_EQUAL_ANGLE,wrkpln,0,0,0,l1,l2);
         _var.entityC = l3;
@@ -391,24 +436,24 @@ public:
     }
 
     Slvs_hConstraint addPointsHorizontal(Slvs_hEntity p1, Slvs_hEntity p2,
-            Slvs_hEntity wrkpln=0, Slvs_hGroup group=0, Slvs_hConstraint h=0)
+            Slvs_hEntity wrkpln, Slvs_hGroup group=0, Slvs_hConstraint h=0)
     {
         return addConstraintV(SLVS_C_HORIZONTAL,wrkpln,0,p1,p2,0,0,group,h);
     }
 
     Slvs_hConstraint addPointsVertical(Slvs_hEntity p1, Slvs_hEntity p2,
-            Slvs_hEntity wrkpln=0, Slvs_hGroup group=0, Slvs_hConstraint h=0)
+            Slvs_hEntity wrkpln, Slvs_hGroup group=0, Slvs_hConstraint h=0)
     {
         return addConstraintV(SLVS_C_VERTICAL,wrkpln,0,p1,p2,0,0,group,h);
     }
 
-    Slvs_hConstraint addLineHorizontal(Slvs_hEntity line, Slvs_hEntity wrkpln=0, 
+    Slvs_hConstraint addLineHorizontal(Slvs_hEntity line, Slvs_hEntity wrkpln, 
                                        Slvs_hGroup group=0, Slvs_hConstraint h=0)
     {
         return addConstraintV(SLVS_C_HORIZONTAL,wrkpln,0,0,0,line,0,group,h);
     }
 
-    Slvs_hConstraint addLineVertical(Slvs_hEntity line, Slvs_hEntity wrkpln=0, 
+    Slvs_hConstraint addLineVertical(Slvs_hEntity line, Slvs_hEntity wrkpln, 
                                     Slvs_hGroup group=0, Slvs_hConstraint h=0)
     {
         return addConstraintV(SLVS_C_VERTICAL,wrkpln,0,0,0,line,0,group,h);

@@ -1,6 +1,7 @@
 %module slvs
 
 %begin %{
+#define PY_SSIZE_T_CLEAN
 #include "slvs_swig.hpp"
 %}
 

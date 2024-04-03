@@ -187,6 +187,8 @@ typedef struct {
 
     /* The solver indicates the number of unconstrained degrees of freedom. */
     int                 dof;
+	
+	int                 findFreeParams;
 
     /* The solver indicates whether the solution succeeded. */
 #define SLVS_RESULT_OKAY                0
